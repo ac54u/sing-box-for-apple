@@ -39,11 +39,17 @@ jobs:
 
       - name: Select Xcode
         run: |
-          if [ -d "/Applications/Xcode_16.4.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
-          else
-            sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          # 本仓库依赖(libghostty 的 UIGlassEffect 等)需要 iOS 26 SDK,
+          # 选最新的 Xcode 26;找不到再回退到最新可用 Xcode。
+          LATEST=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -n1)
+          if [ -z "$LATEST" ]; then
+            LATEST=$(ls -d /Applications/Xcode_*.app 2>/dev/null | sort -V | tail -n1)
           fi
+          if [ -z "$LATEST" ]; then
+            LATEST=/Applications/Xcode.app
+          fi
+          echo "使用 $LATEST"
+          sudo xcode-select -s "$LATEST/Contents/Developer"
 
       - name: Environment
         run: |
