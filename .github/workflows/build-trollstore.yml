@@ -8,9 +8,9 @@ on:
         required: true
         default: dev # 默认改为 dev 分支
       core_ref:
-        description: sing-box 内核版本 (tag/分支),务必与本仓库代码兼容
+        description: sing-box 内核版本 (分支/tag),本仓库 dev 跟随上游 testing 开发分支
         required: true
-        default: v1.13.13 # 锁定内核版本,避免拉到滚动的 testing 分支导致 API 不匹配
+        default: testing # 本仓库 Swift 代码用到很多新 Libbox API,需上游 testing 分支;锁稳定 tag 会缺符号编译失败
 
 jobs:
   build:
