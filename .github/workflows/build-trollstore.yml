@@ -47,15 +47,22 @@ jobs:
           xcodebuild -version
           go version
 
-      - name: Build Libbox
+      - name: Build Go Core
         run: |
           set -o pipefail
           export CODE_SIGNING_ALLOWED=NO
           export CODE_SIGNING_REQUIRED=NO
           export CODE_SIGN_IDENTITY=""
           export ENTITLEMENTS_REQUIRED=NO
-          # 【关键修改】：将 make 改为 make libbox，只编译核心库，彻底跳过 SFI App 的编译！
-          make libbox 2>&1 | tee build.log
+          
+          # 【保险措施】将 Makefile 的完整内容打印到日志中，方便我们偷看它的底牌
+          echo "========== 打印 Makefile 内容 =========="
+          cat Makefile
+          echo "========================================"
+          
+          # 【关键修复】使用 'core' 口令来单独编译底层的 Go 核心库
+          make core 2>&1 | tee build.log
+
 
 
       - name: Build iOS App
