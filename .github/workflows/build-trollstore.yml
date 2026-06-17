@@ -1,65 +1,88 @@
-name: Build sing-box for TrollStore
+name: Build TrollStore IPA
 
 on:
-  workflow_dispatch:
-    inputs:
-      branch:
-        description: 'Target branch to build'
-        required: true
-        default: 'main'
+workflow_dispatch:
+inputs:
+branch:
+description: Build Branch
+required: true
+default: main
 
 jobs:
-  build:
-    name: Build unsigned IPA
-    runs-on: macos-14
+build:
+runs-on: macos-15steps:
+  - name: Checkout
+    uses: actions/checkout@v4
+    with:
+      ref: ${{ github.event.inputs.branch }}
+      submodules: recursive
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.branch }}
-          submodules: 'recursive'
+  - name: Setup Go
+    uses: actions/setup-go@v5
+    with:
+      go-version: '1.24'
 
-      - name: Setup Go environment
-        uses: actions/setup-go@v5
-        with:
-          go-version: '>=1.21.0'
+  - name: Cache Go
+    uses: actions/cache@v4
+    with:
+      path: |
+        ~/go/pkg/mod
+        ~/.cache/go-build
+      key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+      restore-keys: |
+        ${{ runner.os }}-go-
 
-      - name: Select Xcode Version
-        run: |
-          XCODE_PATH=$(ls -d /Applications/Xcode_16*.app | sort -V | tail -n 1)
-          echo "Using Xcode at $XCODE_PATH"
-          sudo xcode-select -s "$XCODE_PATH/Contents/Developer"
+  - name: Select Xcode
+    run: |
+      if [ -d "/Applications/Xcode_16.4.app" ]; then
+        sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
+      else
+        sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+      fi
 
-      - name: Build Go Core
-        # 给 make 命令也加上免签参数，防止其附带的 Debug 编译报错
-        run: |
-          make CODE_SIGNING_ALLOWED=NO \
-               CODE_SIGNING_REQUIRED=NO \
-               CODE_SIGN_IDENTITY="" \
-               ENTITLEMENTS_REQUIRED=NO
+  - name: Environment
+    run: |
+      sw_vers
+      xcodebuild -version
+      go version
 
-      - name: Build iOS App (Unsigned)
-        run: |
-          xcodebuild clean build \
-            -project "sing-box.xcodeproj" \
-            -scheme "sing-box" \
-            -configuration Release \
-            -destination 'generic/platform=iOS' \
-            -derivedDataPath build \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            ENTITLEMENTS_REQUIRED=NO
+  - name: Build Libbox
+    run: |
+      make
 
-      - name: Package IPA for TrollStore
-        run: |
-          mkdir -p Payload
-          mv build/Build/Products/Release-iphoneos/*.app Payload/
-          zip -r sing-box-trollstore.ipa Payload
+  - name: Build iOS App
+    run: |
+      xcodebuild \
+        -project sing-box.xcodeproj \
+        -scheme SFI \
+        -configuration Release \
+        -destination 'generic/platform=iOS' \
+        -derivedDataPath build \
+        CODE_SIGNING_ALLOWED=NO \
+        CODE_SIGNING_REQUIRED=NO \
+        CODE_SIGN_IDENTITY=""
 
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: sing-box-trollstore-ipa
-          path: sing-box-trollstore.ipa
+  - name: Find App
+    run: |
+      find build -name "*.app"
+
+  - name: Package TrollStore IPA
+    run: |
+      APP=$(find build -name "*.app" | head -n 1)
+
+      if [ -z "$APP" ]; then
+        echo "APP not found"
+        exit 1
+      fi
+
+      mkdir Payload
+      cp -R "$APP" Payload/
+
+      zip -qry sing-box-trollstore.ipa Payload
+
+  - name: Upload IPA
+    uses: actions/upload-artifact@v4
+    with:
+      name: sing-box-trollstore
+      path: sing-box-trollstore.ipa
+      retention-days: 30
