@@ -97,7 +97,9 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            ENTITLEMENTS_REQUIRED=NO
+            ENTITLEMENTS_REQUIRED=NO \
+            DEBUG_INFORMATION_FORMAT=dwarf-with-dsym \
+            ONLY_ACTIVE_ARCH=NO
 
       - name: Package TrollStore IPA
         env:
@@ -151,12 +153,35 @@ jobs:
 
           zip -qry sing-box-trollstore.ipa Payload
 
+      - name: Collect dSYMs
+        run: |
+          set -o pipefail
+          # 收集主程序、各扩展、各内嵌框架的符号表,用于崩溃日志(.ips)符号化
+          mkdir -p dsyms
+          find build/Build/Products/Release-iphoneos -name "*.dSYM" -maxdepth 2 -exec cp -R {} dsyms/ \;
+          echo "=== 收集到的 dSYM ==="
+          ls -1 dsyms || true
+          echo "=== 各 dSYM 的 UUID(用于和 .ips 里的 img UUID 对应) ==="
+          for d in dsyms/*.dSYM; do
+            [ -d "$d" ] || continue
+            dwarfdump --uuid "$d" 2>/dev/null || true
+          done
+
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
           name: sing-box-trollstore
           path: sing-box-trollstore.ipa
           retention-days: 30
+
+      - name: Upload dSYMs
+        if: always() # 即便后续步骤失败也尽量上传已生成的符号表
+        uses: actions/upload-artifact@v4
+        with:
+          name: sing-box-dsyms
+          path: dsyms
+          retention-days: 30
+          if-no-files-found: warn
 
       - name: Upload Core Build Log
         if: always() # 即使内核编译失败也上传,方便排查
