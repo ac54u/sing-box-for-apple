@@ -48,12 +48,13 @@ jobs:
           go version
 
       - name: Build Libbox
-        # 【修复】必须给 make 也加上免签参数，否则会报 SFI Debug 编译错误
+        # 将环境变量和你的日志导出需求合并
         run: |
-          make CODE_SIGNING_ALLOWED=NO \
-               CODE_SIGNING_REQUIRED=NO \
-               CODE_SIGN_IDENTITY="" \
-               ENTITLEMENTS_REQUIRED=NO
+          export CODE_SIGNING_ALLOWED=NO
+          export CODE_SIGNING_REQUIRED=NO
+          export CODE_SIGN_IDENTITY=""
+          export ENTITLEMENTS_REQUIRED=NO
+          make 2>&1 | tee build.log
 
       - name: Build iOS App
         run: |
@@ -92,3 +93,10 @@ jobs:
           name: sing-box-trollstore
           path: sing-box-trollstore.ipa
           retention-days: 30
+
+      - name: Upload Build Log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
