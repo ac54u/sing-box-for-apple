@@ -16,7 +16,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch }}
-          submodules: recursive
 
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -50,21 +49,28 @@ jobs:
       - name: Build Go Core (Libbox)
         run: |
           set -o pipefail
-          # 1. 进入子模块（Go 内核）目录
+          
+          # 1. 核心修复：由于内核并不是子模块，我们需要手动将其克隆下来
+          echo "克隆 sing-box 内核源码..."
+          git clone https://github.com/SagerNet/sing-box.git
           cd sing-box
           
-          # 2. 执行真正的内核编译指令
-          echo "开始编译 Go 内核..."
-          make libbox 2>&1 | tee ../build-core.log
+          # 2. 执行 Apple 平台专属的内核编译指令
+          echo "开始编译 Apple 专属 Go 内核..."
+          make lib_install || true # 预先安装必要的编译依赖
+          make lib_apple 2>&1 | tee ../build-core.log
           
-          # 3. 回到根目录
+          # 3. 回到外层根目录
           cd ..
           
-          # 4. 把编译好的核心库挪到外层（也就是上一步 Xcode 报错说找不到的地方）
+          # 4. 把编译好的核心库挪到外层
           if [ -d "sing-box/Libbox.xcframework" ]; then
             cp -R sing-box/Libbox.xcframework .
           elif [ -d "sing-box/build/Libbox.xcframework" ]; then
             cp -R sing-box/build/Libbox.xcframework .
+          else
+            echo "错误：找不到 Libbox.xcframework，请查看日志！"
+            exit 1
           fi
           echo "内核编译并转移成功！"
 
