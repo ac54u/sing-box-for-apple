@@ -11,26 +11,30 @@ on:
 jobs:
   build:
     name: Build unsigned IPA
-    runs-on: macos-14 # 使用较新的 macOS 镜像以支持 iOS 17 SDK
+    runs-on: macos-14
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch }}
-          submodules: 'recursive' # 必须拉取子模块，否则核心代码缺失
+          submodules: 'recursive'
 
       - name: Setup Go environment
         uses: actions/setup-go@v5
         with:
-          go-version: '>=1.20.0' # sing-box 核心依赖 Go 环境进行编译
+          go-version: '>=1.21.0' # 确保 Go 版本足够新以编译内核
 
       - name: Select Xcode Version
-        run: sudo xcode-select -s /Applications/Xcode_15.2.app/Contents/Developer
+        # 升级到较新的 Xcode 15.4 以兼容最新的项目文件
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
+
+      - name: Build Go Core
+        # 巨魔版免签编译前，必须先生成 Libbox.xcframework 核心依赖
+        run: make
 
       - name: Build iOS App (Unsigned)
         run: |
-          # 禁用代码签名进行编译
           xcodebuild clean build \
             -project "sing-box.xcodeproj" \
             -scheme "sing-box" \
@@ -44,7 +48,6 @@ jobs:
 
       - name: Package IPA for TrollStore
         run: |
-          # 巨魔专属打包方式：将编译好的 .app 放入 Payload 文件夹并打包
           mkdir -p Payload
           mv build/Build/Products/Release-iphoneos/*.app Payload/
           zip -r sing-box-trollstore.ipa Payload
