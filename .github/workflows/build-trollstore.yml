@@ -47,27 +47,30 @@ jobs:
           xcodebuild -version
           go version
 
-      - name: Build Go Core
+      - name: Build Go Core (Libbox)
         run: |
           set -o pipefail
-          export CODE_SIGNING_ALLOWED=NO
-          export CODE_SIGNING_REQUIRED=NO
-          export CODE_SIGN_IDENTITY=""
-          export ENTITLEMENTS_REQUIRED=NO
+          # 1. 进入子模块（Go 内核）目录
+          cd sing-box
           
-          # 【保险措施】将 Makefile 的完整内容打印到日志中，方便我们偷看它的底牌
-          echo "========== 打印 Makefile 内容 =========="
-          cat Makefile
-          echo "========================================"
+          # 2. 执行真正的内核编译指令
+          echo "开始编译 Go 内核..."
+          make libbox 2>&1 | tee ../build-core.log
           
-          # 【关键修复】使用 'core' 口令来单独编译底层的 Go 核心库
-          make core 2>&1 | tee build.log
-
-
+          # 3. 回到根目录
+          cd ..
+          
+          # 4. 把编译好的核心库挪到外层（也就是上一步 Xcode 报错说找不到的地方）
+          if [ -d "sing-box/Libbox.xcframework" ]; then
+            cp -R sing-box/Libbox.xcframework .
+          elif [ -d "sing-box/build/Libbox.xcframework" ]; then
+            cp -R sing-box/build/Libbox.xcframework .
+          fi
+          echo "内核编译并转移成功！"
 
       - name: Build iOS App
         run: |
-          xcodebuild \
+          xcodebuild clean build \
             -project sing-box.xcodeproj \
             -scheme SFI \
             -configuration Release \
@@ -77,10 +80,6 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
             ENTITLEMENTS_REQUIRED=NO
-
-      - name: Find App
-        run: |
-          find build -name "*.app"
 
       - name: Package TrollStore IPA
         run: |
@@ -107,5 +106,5 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: build-log
-          path: build.log
+          name: build-core-log
+          path: build-core.log
