@@ -32,10 +32,12 @@ jobs:
           sudo xcode-select -s "$XCODE_PATH/Contents/Developer"
 
       - name: Build Go Core
-        run: make
-        
-      # ... 下面的 Build iOS App 等步骤保持原样不变 ...
-
+        # 给 make 命令也加上免签参数，防止其附带的 Debug 编译报错
+        run: |
+          make CODE_SIGNING_ALLOWED=NO \
+               CODE_SIGNING_REQUIRED=NO \
+               CODE_SIGN_IDENTITY="" \
+               ENTITLEMENTS_REQUIRED=NO
 
       - name: Build iOS App (Unsigned)
         run: |
