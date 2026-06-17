@@ -48,13 +48,15 @@ jobs:
           go version
 
       - name: Build Libbox
-        # 将环境变量和你的日志导出需求合并
         run: |
+          set -o pipefail
           export CODE_SIGNING_ALLOWED=NO
           export CODE_SIGNING_REQUIRED=NO
           export CODE_SIGN_IDENTITY=""
           export ENTITLEMENTS_REQUIRED=NO
-          make 2>&1 | tee build.log
+          # 【关键修改】：将 make 改为 make libbox，只编译核心库，彻底跳过 SFI App 的编译！
+          make libbox 2>&1 | tee build.log
+
 
       - name: Build iOS App
         run: |
