@@ -1,63 +1,109 @@
-name: Build sing-box for TrollStore
+name: Build TrollStore IPA
 
 on:
   workflow_dispatch:
     inputs:
-      target_branch:
-        description: 'Target branch to build (e.g. main, dev, stable)'
+      branch:
+        description: Build Branch
         required: true
-        default: 'main'
+        default: dev # 默认改为 dev 分支
 
 jobs:
   build:
-    runs-on: macos-latest
-
+    runs-on: macos-15
     steps:
-      - name: Checkout Code
+      - name: Checkout
         uses: actions/checkout@v4
         with:
-          # 精准拉取你在触发时输入的分支代码
-          ref: ${{ github.event.inputs.target_branch }}
-          # 极其关键：必须递归拉取所有子模块（如内核及第三方库 Runestone 等），否则会报找不到库的错
-          submodules: 'recursive'
+          ref: ${{ github.event.inputs.branch }}
+          submodules: recursive
 
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24.x'
-          cache: true
+          go-version: '1.24'
+
+      - name: Cache Go
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Select Xcode
+        run: |
+          if [ -d "/Applications/Xcode_16.4.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
+          else
+            sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          fi
+
+      - name: Environment
+        run: |
+          sw_vers
+          xcodebuild -version
+          go version
 
       - name: Build Go Core (Libbox)
         run: |
-          # 提前编译底层内核，跳过签名
-          make CODE_SIGNING_ALLOWED=NO
+          set -o pipefail
+          
+          # 智能判断：如果 dev 分支没有自带内核，我们才去手动克隆，防止冲突报错
+          if [ ! -d "sing-box" ]; then
+            echo "未检测到内核子模块，手动克隆最新内核..."
+            git clone https://github.com/SagerNet/sing-box.git
+          else
+            echo "已检测到内核文件夹，直接使用..."
+          fi
+          
+          cd sing-box
+          make lib_install || true
+          make lib_apple 2>&1 | tee ../build-core.log
+          
+          cd ..
+          if [ -d "sing-box/Libbox.xcframework" ]; then
+            cp -R sing-box/Libbox.xcframework .
+          elif [ -d "sing-box/build/Libbox.xcframework" ]; then
+            cp -R sing-box/build/Libbox.xcframework .
+          else
+            echo "错误：找不到 Libbox.xcframework"
+            exit 1
+          fi
+          echo "内核编译并转移成功！"
 
-      - name: Build iOS App (No Signature)
+      - name: Build iOS App
         run: |
-          # 使用 xcodebuild 或 make 编译免签纯净版 UI 外壳
           xcodebuild clean build \
             -project sing-box.xcodeproj \
-            -scheme "sing-box" \
+            -scheme SFI \
             -configuration Release \
-            -destination "generic/platform=iOS" \
+            -destination 'generic/platform=iOS' \
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
             ENTITLEMENTS_REQUIRED=NO
 
-      - name: Package Payload to IPA
+      - name: Package TrollStore IPA
         run: |
-          # 巨魔安装器直接读取 Payload/*.app 结构，我们将其打包成 .ipa 即可使用
-          mkdir -p Payload
-          # 将编译生成的 .app 移动到 Payload 文件夹
-          cp -r build/Build/Products/Release-iphoneos/sing-box.app Payload/
-          # 压缩为巨魔可识别的 .ipa 文件
-          zip -r9 sing-box-trollstore-ipa.zip Payload
+          APP=$(find build -name "*.app" | head -n 1)
 
-      - name: Upload Artifact
+          if [ -z "$APP" ]; then
+            echo "APP not found"
+            exit 1
+          fi
+
+          mkdir Payload
+          cp -R "$APP" Payload/
+
+          zip -qry sing-box-trollstore.ipa Payload
+
+      - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
-          # 最后生成供下载的压缩包名字
-          name: sing-box-trollstore-ipa
-          path: sing-box-trollstore-ipa.zip
+          name: sing-box-trollstore
+          path: sing-box-trollstore.ipa
+          retention-days: 30
