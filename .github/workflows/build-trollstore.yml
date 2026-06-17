@@ -16,6 +16,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch }}
+          submodules: recursive # <--- 加上这一行，把 UI 依赖的子模块拉下来
+
 
       - name: Setup Go
         uses: actions/setup-go@v5
