@@ -7,6 +7,10 @@ on:
         description: Build Branch
         required: true
         default: dev # 默认改为 dev 分支
+      core_ref:
+        description: sing-box 内核版本 (tag/分支),务必与本仓库代码兼容
+        required: true
+        default: v1.13.13 # 锁定内核版本,避免拉到滚动的 testing 分支导致 API 不匹配
 
 jobs:
   build:
@@ -48,21 +52,23 @@ jobs:
           go version
 
       - name: Build Go Core (Libbox)
+        env:
+          CORE_REF: ${{ github.event.inputs.core_ref }}
         run: |
           set -o pipefail
-          
+
           # 智能判断：如果 dev 分支没有自带内核，我们才去手动克隆，防止冲突报错
           if [ ! -d "sing-box" ]; then
-            echo "未检测到内核子模块，手动克隆最新内核..."
-            git clone https://github.com/SagerNet/sing-box.git
+            echo "未检测到内核子模块，按指定版本 ($CORE_REF) 克隆内核..."
+            git clone --depth 1 -b "$CORE_REF" https://github.com/SagerNet/sing-box.git
           else
             echo "已检测到内核文件夹，直接使用..."
           fi
-          
+
           cd sing-box
           make lib_install || true
           make lib_apple 2>&1 | tee ../build-core.log
-          
+
           cd ..
           if [ -d "sing-box/Libbox.xcframework" ]; then
             cp -R sing-box/Libbox.xcframework .
@@ -88,12 +94,50 @@ jobs:
             ENTITLEMENTS_REQUIRED=NO
 
       - name: Package TrollStore IPA
+        env:
+          GH_WS: ${{ github.workspace }}
         run: |
-          APP=$(find build -name "*.app" | head -n 1)
+          set -o pipefail
 
-          if [ -z "$APP" ]; then
+          # 精确定位产物，避免 find 命中 DerivedData 中间产物
+          APP=$(ls -d build/Build/Products/Release-iphoneos/*.app 2>/dev/null | head -n 1)
+          if [ -z "$APP" ] || [ ! -d "$APP" ]; then
             echo "APP not found"
             exit 1
+          fi
+          echo "找到 App: $APP"
+
+          # TrollStore 需要二进制内嵌 entitlements,否则 VPN(网络扩展)无法启动。
+          # 用 ldid 对主程序及各扩展按各自的 entitlements 做 fakesign。
+          brew install ldid
+
+          fakesign() {
+            # $1 = bundle 目录, $2 = entitlements 文件
+            local bundle="$1" ent="$2"
+            local exec_name
+            exec_name=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$bundle/Info.plist" 2>/dev/null)
+            if [ -z "$exec_name" ] || [ ! -f "$bundle/$exec_name" ]; then
+              echo "  跳过(找不到可执行文件): $bundle"
+              return
+            fi
+            if [ ! -f "$ent" ]; then
+              echo "  跳过(找不到 entitlements: $ent): $bundle"
+              return
+            fi
+            echo "  签名 $bundle/$exec_name  <-  $ent"
+            ldid -S"$ent" "$bundle/$exec_name"
+          }
+
+          echo "对主 App 签名..."
+          fakesign "$APP" "$GH_WS/SFI/SFI.entitlements"
+
+          if [ -d "$APP/PlugIns" ]; then
+            echo "对扩展签名..."
+            for appex in "$APP"/PlugIns/*.appex; do
+              [ -d "$appex" ] || continue
+              name=$(basename "$appex" .appex)   # 扩展名 = target 名,对应 <name>/<name>.entitlements
+              fakesign "$appex" "$GH_WS/$name/$name.entitlements"
+            done
           fi
 
           mkdir Payload
@@ -107,3 +151,12 @@ jobs:
           name: sing-box-trollstore
           path: sing-box-trollstore.ipa
           retention-days: 30
+
+      - name: Upload Core Build Log
+        if: always() # 即使内核编译失败也上传,方便排查
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-core-log
+          path: build-core.log
+          retention-days: 30
+          if-no-files-found: warn
