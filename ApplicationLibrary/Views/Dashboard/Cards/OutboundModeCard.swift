@@ -67,7 +67,7 @@ public struct OutboundModeCard: View {
 
     private nonisolated func setMode(_ newMode: String) async {
         do {
-            let client = CommandTarget.standaloneClient()
+            let client = try CommandTarget.standaloneClient()
             try client.setClashMode(newMode)
             // Close all existing connections so they reconnect under the new routing rule immediately.
             try client.closeConnections()
