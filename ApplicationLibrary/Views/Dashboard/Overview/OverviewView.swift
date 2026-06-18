@@ -84,7 +84,7 @@ public struct OverviewView: View {
 
     private func shouldShowCard(_ card: DashboardCard) -> Bool {
         switch card {
-        case .status, .connections, .uploadTraffic, .downloadTraffic, .clashMode, .outboundMode, .proxyServer:
+        case .status, .connections, .uploadTraffic, .downloadTraffic, .outboundMode, .proxyServer:
             return Variant.screenshotMode || profile.status.isConnected
         case .httpProxy:
             return (Variant.screenshotMode || profile.status.isConnectedStrict) && systemProxyAvailable
@@ -115,9 +115,6 @@ public struct OverviewView: View {
             ) { enabled in
                 await coordinator.setSystemProxyEnabled(enabled, profile: profile)
             }
-        case .clashMode:
-            ClashModeCard()
-                .environmentObject(environments.commandClient)
         case .outboundMode:
             OutboundModeCard()
                 .environmentObject(environments.commandClient)

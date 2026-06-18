@@ -18,6 +18,7 @@ public struct LogFileDetailView: View {
     #endif
 
     private static let maxReadSize: Int64 = 512 * 1024 // 512 KB
+    private static let monoFont = Font.system(size: 11, design: .monospaced)
 
     public var body: some View {
         Group {
@@ -25,28 +26,16 @@ public struct LogFileDetailView: View {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 0) {
-                            if truncated {
-                                Text("日志文件过大 (\(entry.formattedSize))，仅显示末尾 \(Int(Self.maxReadSize / 1024)) KB")
-                                    .font(.system(size: 12))
-                                    .foregroundStyle(.secondary)
-                                    .padding(.horizontal)
-                                    .padding(.top, 8)
-                                    .padding(.bottom, 4)
-                            }
-                            Text(content)
-                                .font(.system(size: 11, design: .monospaced))
-                                .textSelection(.enabled)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding()
-                                .id("bottom")
-                        }
+                VStack(alignment: .leading, spacing: 0) {
+                    if truncated {
+                        Text("日志文件过大 (\(entry.formattedSize))，仅显示末尾 \(Int(Self.maxReadSize / 1024)) KB")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal)
+                            .padding(.top, 8)
+                            .padding(.bottom, 4)
                     }
-                    .onAppear {
-                        proxy.scrollTo("bottom", anchor: .bottom)
-                    }
+                    LogFileTextView(content: content, font: Self.monoFont)
                 }
             }
         }
@@ -127,6 +116,97 @@ public struct LogFileDetailView: View {
         #endif
     }
 }
+
+// MARK: - Native text view for O(1) viewport-based layout
+
+/// Uses `UITextView` (iOS) / `NSTextView` (macOS) backed by TextKit 2 so that only
+/// the visible viewport is laid out — 481 KB renders as fast as 4 KB. SwiftUIʼs
+/// `Text` would lay out every line in the document even when it is off-screen.
+private struct LogFileTextView: View {
+    let content: String
+    let font: Font
+
+    var body: some View {
+        #if os(iOS)
+            LogFileTextViewIOS(content: content, font: font)
+        #elseif os(macOS)
+            LogFileTextViewMacOS(content: content, font: font)
+        #endif
+    }
+}
+
+#if os(iOS)
+    private struct LogFileTextViewIOS: UIViewRepresentable {
+        let content: String
+        let font: Font
+
+        private static let monoFont = UIFont.monospacedSystemFont(ofSize: 11, weight: .regular)
+        private static let defaultColor = UIColor.label
+
+        func makeUIView(context _: Context) -> UITextView {
+            let textView = UITextView()
+            textView.isEditable = false
+            textView.isSelectable = true
+            textView.isScrollEnabled = true
+            textView.backgroundColor = .clear
+            textView.textContainerInset = UIEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
+            textView.textContainer.lineFragmentPadding = 0
+            textView.font = Self.monoFont
+            textView.textColor = Self.defaultColor
+            textView.text = content
+            return textView
+        }
+
+        func updateUIView(_ textView: UITextView, context: Context) {
+            // content is static — set once, no updates needed
+        }
+
+        static func dismantleUIView(_ textView: UITextView, coordinator _: ()) {
+            // Break retain cycle: setting text = nil releases the backing NSTextStorage
+            textView.text = nil
+        }
+    }
+#endif
+
+#if os(macOS)
+    private struct LogFileTextViewMacOS: NSViewRepresentable {
+        let content: String
+        let font: Font
+
+        private static let monoFont = NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)
+        private static let defaultColor = NSColor.labelColor
+
+        func makeNSView(context _: Context) -> NSScrollView {
+            let scrollView = NSScrollView()
+            scrollView.hasVerticalScroller = true
+            scrollView.hasHorizontalScroller = false
+            scrollView.autohidesScrollers = true
+
+            let textView = NSTextView(usingTextLayoutManager: true)
+            textView.isEditable = false
+            textView.isSelectable = true
+            textView.drawsBackground = false
+            textView.textContainerInset = NSSize(width: 16, height: 16)
+            textView.font = Self.monoFont
+            textView.textColor = Self.defaultColor
+            textView.string = content
+            textView.autoresizingMask = [.width]
+
+            if let textContainer = textView.textContainer {
+                textContainer.widthTracksTextView = true
+                textContainer.containerSize = NSSize(width: scrollView.contentSize.width, height: .greatestFiniteMagnitude)
+                textContainer.lineFragmentPadding = 0
+            }
+
+            scrollView.documentView = textView
+            return scrollView
+        }
+
+        func updateNSView(_ scrollView: NSScrollView, context: Context) {
+            // content is static — set once, no updates needed
+        }
+    }
+#endif
 
 #if os(iOS)
     private struct ActivityView: UIViewControllerRepresentable {

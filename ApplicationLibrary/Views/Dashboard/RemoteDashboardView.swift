@@ -168,7 +168,7 @@ public struct RemoteDashboardView: View {
 
     private func shouldShowCard(_ card: DashboardCard) -> Bool {
         switch card {
-        case .status, .connections, .uploadTraffic, .downloadTraffic, .clashMode, .outboundMode, .proxyServer:
+        case .status, .connections, .uploadTraffic, .downloadTraffic, .outboundMode, .proxyServer:
             return true
         case .httpProxy, .profile:
             return false
@@ -186,8 +186,6 @@ public struct RemoteDashboardView: View {
             UploadTrafficCard()
         case .downloadTraffic:
             DownloadTrafficCard()
-        case .clashMode:
-            ClashModeCard()
         case .outboundMode:
             OutboundModeCard()
         case .proxyServer:

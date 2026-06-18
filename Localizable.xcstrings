@@ -3685,7 +3685,14 @@
       }
     },
     "enforceRoutes" : {
-      "shouldTranslate" : false
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "强制执行路由"
+          }
+        }
+      }
     },
     "Error" : {
       "localizations" : {
@@ -3828,16 +3835,44 @@
       }
     },
     "excludeAPNs" : {
-      "shouldTranslate" : false
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "排除推送通知"
+          }
+        }
+      }
     },
     "excludeCellularServices" : {
-      "shouldTranslate" : false
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "排除蜂窝服务"
+          }
+        }
+      }
     },
     "excludeDeviceCommunication" : {
-      "shouldTranslate" : false
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "排除设备间通信"
+          }
+        }
+      }
     },
     "excludeLocalNetworks" : {
-      "shouldTranslate" : false
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "排除本地网络"
+          }
+        }
+      }
     },
     "Exit Node" : {
       "localizations" : {
@@ -5144,6 +5179,12 @@
     },
     "If this property is true when the **includeAllNetworks** property is false, the system scopes the included routes to the VPN and the excluded routes to the current primary network interface. This property supersedes the system routing table and scoping operations by apps.\n\nIf you set both the **enforceRoutes** and **excludeLocalNetworks** properties to true, the system excludes network connections to hosts on the local network.\n\n[Apple Documentation](https://developer.apple.com/documentation/networkextension/nevpnprotocol/3689459-enforceroutes)" : {
       "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当 **includeAllNetworks** 关闭时，将 VPN 路由表优先级提升至系统路由表之上。同时开启 **excludeLocalNetworks** 可排除本地网络连接。\n\n[Apple 文档](https://developer.apple.com/documentation/networkextension/nevpnprotocol/3689459-enforceroutes)"
+          }
+        },
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5167,6 +5208,12 @@
     },
     "If this property is true, the system excludes Apple Push Notification services (APNs) traffic, but only when the **includeAllNetworks** property is also true.\n\n[Apple Documentation](https://developer.apple.com/documentation/networkextension/nevpnprotocol/4140516-excludeapns)" : {
       "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "排除苹果推送通知（APNs）流量，仅当 **includeAllNetworks** 开启时生效。\n\n[Apple 文档](https://developer.apple.com/documentation/networkextension/nevpnprotocol/4140516-excludeapns)"
+          }
+        },
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5190,6 +5237,12 @@
     },
     "If this property is true, the system excludes cellular services — such as Wi-Fi Calling, MMS, SMS, and Visual Voicemail — but only when the **includeAllNetworks** property is also true. This property doesn't impact services that use the cellular network only — such as VoLTE — which the system automatically excludes.\n\n[Apple Documentation](https://developer.apple.com/documentation/networkextension/nevpnprotocol/4140517-excludecellularservices)" : {
       "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "排除蜂窝网络服务（Wi-Fi 通话、彩信、短信、可视语音信箱），仅当 **includeAllNetworks** 开启时生效。VoLTE 等纯蜂窝服务由系统自动排除。\n\n[Apple 文档](https://developer.apple.com/documentation/networkextension/nevpnprotocol/4140517-excludecellularservices)"
+          }
+        },
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5213,6 +5266,12 @@
     },
     "If this property is true, the system excludes network connections to hosts on the local network — such as AirPlay, AirDrop, and CarPlay — but only when the **includeAllNetworks** or **enforceRoutes** property is also true.\n\n[Apple Documentation](https://developer.apple.com/documentation/networkextension/nevpnprotocol/3143658-excludelocalnetworks)" : {
       "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "排除本地网络连接（AirPlay、AirDrop、CarPlay 等），仅当 **includeAllNetworks** 或 **enforceRoutes** 开启时生效。\n\n[Apple 文档](https://developer.apple.com/documentation/networkextension/nevpnprotocol/3143658-excludelocalnetworks)"
+          }
+        },
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5236,6 +5295,12 @@
     },
     "If this property is true, the system routes network traffic through the tunnel except traffic for designated system services necessary for maintaining expected device functionality. You can exclude some types of traffic using the **excludeAPNs**, **excludeLocalNetworks**, and **excludeCellularServices** properties in combination with this property.\n\nwhen enabled, the default TUN stack is changed to `gvisor`, and the `system` and `mixed` stacks are not available.\n\n[Apple Documentation](https://developer.apple.com/documentation/networkextension/nevpnprotocol/3131931-includeallnetworks)" : {
       "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将所有网络流量路由至隧道，仅保留维持设备正常功能所必需的系统服务流量。可配合 **excludeAPNs**、**excludeLocalNetworks**、**excludeCellularServices** 排除特定类型流量。\n\n开启后 TUN 协议栈切换为 `gvisor`，`system` 和 `mixed` 模式不再可用。\n\n[Apple 文档](https://developer.apple.com/documentation/networkextension/nevpnprotocol/3131931-includeallnetworks)"
+          }
+        },
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5566,7 +5631,14 @@
       }
     },
     "includeAllNetworks" : {
-      "shouldTranslate" : false
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "包含所有网络"
+          }
+        }
+      }
     },
     "Install" : {
       "localizations" : {
@@ -7364,7 +7436,14 @@
       }
     },
     "No documentation.\n\n[Apple Documentation](https://developer.apple.com/documentation/networkextension/nevpnprotocol/excludedevicecommunication)" : {
-      "shouldTranslate" : false
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "排除设备间通信流量。Apple 暂无详细文档。\n\n[Apple 文档](https://developer.apple.com/documentation/networkextension/nevpnprotocol/excludedevicecommunication)"
+          }
+        }
+      }
     },
     "No servers" : {
       "localizations" : {
