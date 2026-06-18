@@ -9,6 +9,7 @@ public enum DashboardCard: String, CaseIterable, Identifiable, Codable, Hashable
     case httpProxy
     case clashMode
     case outboundMode
+    case proxyServer
     case profile
 
     public var id: String {
@@ -30,7 +31,7 @@ public enum DashboardCard: String, CaseIterable, Identifiable, Codable, Hashable
         case .clashMode:
             return "Clash Mode"
         case .outboundMode:
-            return "Outbound Mode"
+            return "出站模式"
         case .profile:
             return "Profile"
         }

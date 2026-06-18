@@ -6,6 +6,7 @@ public struct OutboundModeCard: View {
     @EnvironmentObject private var commandClient: CommandClient
     @State private var clashMode: String = ""
     @State private var alert: AlertState?
+    @State private var showGroups = false
 
     public init() {}
 
@@ -13,8 +14,25 @@ public struct OutboundModeCard: View {
         if commandClient.clashModeList.count > 1 {
             DashboardCardView(title: "", isHalfWidth: false) {
                 VStack(alignment: .leading, spacing: 12) {
-                    DashboardCardHeader(icon: "arrow.triangle.branch", title: "Outbound Mode")
+                    DashboardCardHeader(icon: "arrow.triangle.branch", title: "出站模式")
                     modeButtons
+                    #if !os(tvOS)
+                    HStack {
+                        Spacer()
+                        Button {
+                            showGroups = true
+                        } label: {
+                            HStack(spacing: 3) {
+                                Text("代理服务器")
+                                    .font(.system(size: 12, weight: .medium))
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 10, weight: .semibold))
+                            }
+                            .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    #endif
                 }
             }
             .onAppear {
@@ -24,6 +42,11 @@ public struct OutboundModeCard: View {
                 clashMode = newValue
             }
             .alert($alert)
+            #if !os(tvOS)
+            .sheet(isPresented: $showGroups) {
+                GroupsSheetContent()
+            }
+            #endif
         }
     }
 
@@ -97,11 +120,11 @@ private struct OutboundModeButton: View {
     private var modeDisplayText: String {
         switch mode.lowercased() {
         case "rule", "rules":
-            return String(localized: "Rule")
+            return "规则模式"
         case "global":
-            return String(localized: "Global")
+            return "全局代理"
         case "direct":
-            return String(localized: "Direct")
+            return "直接连接"
         default:
             return mode.capitalized
         }
