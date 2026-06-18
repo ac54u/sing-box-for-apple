@@ -12,9 +12,12 @@ public struct LogFileDetailView: View {
 
     @State private var content = ""
     @State private var isLoading = true
+    @State private var truncated = false
     #if os(iOS)
         @State private var showShareSheet = false
     #endif
+
+    private static let maxReadSize: Int64 = 512 * 1024 // 512 KB
 
     public var body: some View {
         Group {
@@ -24,12 +27,22 @@ public struct LogFileDetailView: View {
             } else {
                 ScrollViewReader { proxy in
                     ScrollView {
-                        Text(content)
-                            .font(.system(size: 11, design: .monospaced))
-                            .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding()
-                            .id("bottom")
+                        VStack(alignment: .leading, spacing: 0) {
+                            if truncated {
+                                Text("日志文件过大 (\(entry.formattedSize))，仅显示末尾 \(Int(Self.maxReadSize / 1024)) KB")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(.secondary)
+                                    .padding(.horizontal)
+                                    .padding(.top, 8)
+                                    .padding(.bottom, 4)
+                            }
+                            Text(content)
+                                .font(.system(size: 11, design: .monospaced))
+                                .textSelection(.enabled)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding()
+                                .id("bottom")
+                        }
                     }
                     .onAppear {
                         proxy.scrollTo("bottom", anchor: .bottom)
@@ -65,12 +78,43 @@ public struct LogFileDetailView: View {
     }
 
     private func loadContent() {
-        guard let text = try? String(contentsOf: entry.url, encoding: .utf8) else {
+        let fileSize = entry.size
+
+        guard let fileHandle = try? FileHandle(forReadingFrom: entry.url) else {
             content = "(读取失败)"
             isLoading = false
             return
         }
-        content = text
+        defer { try? fileHandle.close() }
+
+        if fileSize <= Self.maxReadSize {
+            guard let data = try? fileHandle.readToEnd(),
+                  let text = String(data: data, encoding: .utf8)
+            else {
+                content = "(读取失败)"
+                isLoading = false
+                return
+            }
+            content = text
+        } else {
+            // Seek back a few extra bytes to avoid splitting a multi-byte UTF-8 character
+            let tailSize = min(Self.maxReadSize, fileSize)
+            let safeOffset = max(0, fileSize - tailSize - 4)
+            try? fileHandle.seek(toOffset: UInt64(safeOffset))
+            guard let data = try? fileHandle.readToEnd(),
+                  var text = String(data: data, encoding: .utf8)
+            else {
+                content = "(读取失败)"
+                isLoading = false
+                return
+            }
+            // Skip to first newline to discard any partial line from the seek offset
+            if let newlineRange = text.range(of: "\n") {
+                text = String(text[newlineRange.upperBound...])
+            }
+            truncated = true
+            content = text
+        }
         isLoading = false
     }
 
