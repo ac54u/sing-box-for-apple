@@ -32,6 +32,8 @@ public enum DashboardCard: String, CaseIterable, Identifiable, Codable, Hashable
             return "Clash Mode"
         case .outboundMode:
             return "出站模式"
+        case .proxyServer:
+            return "代理服务器"
         case .profile:
             return "Profile"
         }
@@ -53,6 +55,8 @@ public enum DashboardCard: String, CaseIterable, Identifiable, Codable, Hashable
             return "circle.grid.2x2.fill"
         case .outboundMode:
             return "arrow.triangle.branch"
+        case .proxyServer:
+            return "server.rack"
         case .profile:
             return "doc.text.fill"
         }
@@ -62,7 +66,7 @@ public enum DashboardCard: String, CaseIterable, Identifiable, Codable, Hashable
         switch self {
         case .status, .connections, .uploadTraffic, .downloadTraffic:
             return true
-        case .httpProxy, .clashMode, .outboundMode, .profile:
+        case .httpProxy, .clashMode, .outboundMode, .proxyServer, .profile:
             return false
         }
     }
@@ -72,6 +76,6 @@ public enum DashboardCard: String, CaseIterable, Identifiable, Codable, Hashable
     }
 
     public static var defaultOrder: [DashboardCard] {
-        [.uploadTraffic, .downloadTraffic, .status, .connections, .httpProxy, .outboundMode, .clashMode, .profile]
+        [.uploadTraffic, .downloadTraffic, .status, .connections, .httpProxy, .outboundMode, .proxyServer, .clashMode, .profile]
     }
 }

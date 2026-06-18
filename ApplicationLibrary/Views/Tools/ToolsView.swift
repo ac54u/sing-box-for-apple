@@ -11,6 +11,7 @@ public struct ToolsView: View {
     #if os(iOS)
         @State private var showCrashReportList = false
         @State private var showOOMReportList = false
+        @State private var showLogFileList = false
         @State private var remoteServers: [RemoteServer] = []
     #endif
     #if !os(tvOS)
@@ -81,6 +82,11 @@ public struct ToolsView: View {
             if environments.remoteServer == nil {
                 Section("Debug") {
                     #if os(iOS)
+                        NavigationLink(isActive: $showLogFileList) {
+                            LogFileListView()
+                        } label: {
+                            Label("日志记录", systemImage: "doc.text.magnifyingglass")
+                        }
                         NavigationLink(isActive: $showCrashReportList) {
                             CrashReportListView()
                         } label: {
@@ -107,6 +113,15 @@ public struct ToolsView: View {
                                 .badge(environments.oomReportManager.unreadCount)
                         }
                     #else
+                        FormNavigationLink {
+                            LogFileListView()
+                        } label: {
+                            #if os(tvOS)
+                                Label("日志记录", systemImage: "doc.text.magnifyingglass")
+                            #else
+                                Label("日志记录", systemImage: "doc.text.magnifyingglass")
+                            #endif
+                        }
                         FormNavigationLink {
                             CrashReportListView()
                         } label: {

@@ -39,6 +39,12 @@ public enum FilePath {
 
     #endif
 
+    public static var logsDirectory: URL {
+        sharedDirectory
+            .appendingPathComponent("Library", isDirectory: true)
+            .appendingPathComponent("Logs", isDirectory: true)
+    }
+
     public static var iCloudDirectory = FileManager.default.url(forUbiquityContainerIdentifier: nil)?.appendingPathComponent("Documents", isDirectory: true) ?? URL(string: "stub")!
 }
 

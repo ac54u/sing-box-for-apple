@@ -149,6 +149,7 @@ public class CommandClient: ObservableObject {
     private var pendingLogs: [LogEntry] = []
     private var logBatchTimer: DispatchWorkItem?
     private let logBatchInterval: TimeInterval = 0.1 // 100ms batch window
+    var sessionLogger: SessionLogger?
 
     public init(_ connectionTypes: [ConnectionType], logMaxLines: Int = 3000, localOnly: Bool = false) {
         self.connectionTypes = connectionTypes
@@ -356,6 +357,8 @@ public class CommandClient: ObservableObject {
                 if commandClient.connectionTypes.contains(.log) {
                     commandClient.initialLogsReceived = false
                     commandClient.clearLogs()
+                    commandClient.sessionLogger?.close()
+                    commandClient.sessionLogger = SessionLogger()
                 }
                 commandClient.lastError = nil
                 commandClient.isConnected = true
@@ -369,6 +372,8 @@ public class CommandClient: ObservableObject {
                     commandClient.lastError = ConnectionError(kind: .connectionLost, message: message)
                 }
                 commandClient.isConnected = false
+                commandClient.sessionLogger?.close()
+                commandClient.sessionLogger = nil
             }
             if let message {
                 logger.debug("client disconnected: \(message)")
@@ -408,6 +413,7 @@ public class CommandClient: ObservableObject {
                     commandClient.initialLogsReceived = true
                 }
                 guard !newLogs.isEmpty else { return }
+                commandClient.sessionLogger?.write(newLogs)
                 commandClient.pendingLogs.append(contentsOf: newLogs)
                 if commandClient.logBatchTimer == nil {
                     if commandClient.logBuffer.entries.isEmpty {
